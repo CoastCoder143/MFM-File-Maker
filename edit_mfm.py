@@ -54,6 +54,24 @@ def remove_quotes(s):
     return s
 
 
+def list_available_templates():
+    """
+    List available .mfm template files in the input-mfm folder.
+    
+    Returns:
+        None (prints to stdout)
+    """
+    try:
+        templates = [f for f in os.listdir('input-mfm') if f.endswith('.mfm')]
+        if templates:
+            for template in sorted(templates):
+                print(f"  - {template}")
+        else:
+            print("  (no .mfm templates found)")
+    except (OSError, FileNotFoundError):
+        print("  (unable to list templates)")
+
+
 def prompt_user():
     """Prompt user for required inputs."""
     print("MIKE .mfm File Editor")
@@ -111,15 +129,7 @@ def prompt_user():
         print(f"Error: You provided a folder path, but a template filename is required.")
         print(f"Please provide just the template filename, not the full path.")
         print(f"\nAvailable templates in 'input-mfm' folder:")
-        try:
-            templates = [f for f in os.listdir('input-mfm') if f.endswith('.mfm')]
-            if templates:
-                for template in sorted(templates):
-                    print(f"  - {template}")
-            else:
-                print("  (no .mfm templates found)")
-        except Exception:
-            pass
+        list_available_templates()
         print(f"\nExample: Instead of '{mfm_file}'")
         print(f"         Use: 'template.mfm'")
         sys.exit(1)
@@ -133,15 +143,7 @@ def prompt_user():
         print(f"Error: You provided a full path, but only the filename is needed.")
         print(f"Please provide just the template filename from the 'input-mfm' folder.")
         print(f"\nAvailable templates in 'input-mfm' folder:")
-        try:
-            templates = [f for f in os.listdir('input-mfm') if f.endswith('.mfm')]
-            if templates:
-                for template in sorted(templates):
-                    print(f"  - {template}")
-            else:
-                print("  (no .mfm templates found)")
-        except Exception:
-            pass
+        list_available_templates()
         if basename and basename.endswith('.mfm'):
             print(f"\nExample: Instead of '{mfm_file}'")
             print(f"         Use: '{basename}'")
@@ -154,15 +156,7 @@ def prompt_user():
     if not os.path.isfile(template_path):
         print(f"Error: Template file '{mfm_file}' not found in 'input-mfm' folder.")
         print(f"\nAvailable templates:")
-        try:
-            templates = [f for f in os.listdir('input-mfm') if f.endswith('.mfm')]
-            if templates:
-                for template in sorted(templates):
-                    print(f"  - {template}")
-            else:
-                print("  (no .mfm templates found)")
-        except Exception:
-            print("  (unable to list templates)")
+        list_available_templates()
         sys.exit(1)
     
     return dfs0_folder, dfsu_folder, template_path
