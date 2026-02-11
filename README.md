@@ -52,7 +52,7 @@ The script parses the .mfm file into sections (e.g., `[DREDGER_1]`, `[MORPHOLOGY
    - Finds the `[MORPHOLOGY]` section
    - Locates the first `[OUTPUTS]` section that appears after `[MORPHOLOGY]`
    - Within that scope, finds the `[OUTPUT_1]` section
-   - Updates `file_name = "path"` with `<output_folder>\<mfm_basename>.dfsu`
+   - Updates `file_name = "path"` with the output .dfsu file path constructed from the output folder and the .mfm file's base name (e.g., `output_folder/sample.dfsu` for `sample.mfm`)
    - Does NOT preserve the pipe character
 
 ### Error Handling
