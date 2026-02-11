@@ -58,8 +58,11 @@ def list_available_templates():
     """
     List available .mfm template files in the input-mfm folder.
     
+    Prints the list of templates to stdout. If the directory cannot be accessed
+    (OSError or FileNotFoundError), prints an error message instead.
+    
     Returns:
-        None (prints to stdout)
+        None
     """
     try:
         templates = [f for f in os.listdir('input-mfm') if f.endswith('.mfm')]
@@ -138,7 +141,8 @@ def prompt_user():
     # Check for both forward slash and backslash to handle Windows paths
     if '/' in mfm_file or '\\' in mfm_file:
         # Extract just the filename
-        # Use both os.path.basename and manual splitting to handle Windows paths on Unix
+        # On Unix, os.path.basename doesn't treat backslash as path separator,
+        # so we normalize to forward slashes first to handle Windows paths correctly
         basename = os.path.basename(mfm_file.replace('\\', '/'))
         print(f"Error: You provided a full path, but only the filename is needed.")
         print(f"Please provide just the template filename from the 'input-mfm' folder.")
