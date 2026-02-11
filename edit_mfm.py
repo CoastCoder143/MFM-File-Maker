@@ -22,15 +22,32 @@ import shutil
 from pathlib import Path
 
 
+def remove_quotes(s):
+    """
+    Remove matching outer quotes from a string.
+    Only removes quotes if they match (both single or both double).
+    
+    Examples:
+        "path" -> path
+        'path' -> path
+        "'path'" -> 'path'
+        '"path"' -> "path"
+        path -> path (no change)
+    """
+    s = s.strip()
+    if len(s) >= 2:
+        if (s[0] == '"' and s[-1] == '"') or (s[0] == "'" and s[-1] == "'"):
+            return s[1:-1]
+    return s
+
+
 def prompt_user():
     """Prompt user for required inputs."""
     print("MIKE .mfm File Editor")
     print("=" * 50)
     
     # Prompt for input .dfs0 folder
-    dfs0_folder = input("Enter input .dfs0 folder path: ").strip()
-    # Strip surrounding quotes (common on Windows when paths have spaces)
-    dfs0_folder = dfs0_folder.strip('\'"')
+    dfs0_folder = remove_quotes(input("Enter input .dfs0 folder path: "))
     
     # Check if user provided a .dfs0 file path (even if it doesn't exist)
     if dfs0_folder.lower().endswith('.dfs0'):
@@ -56,9 +73,7 @@ def prompt_user():
         sys.exit(1)
     
     # Prompt for output .dfsu folder
-    dfsu_folder = input("Enter output .dfsu folder path: ").strip()
-    # Strip surrounding quotes (common on Windows when paths have spaces)
-    dfsu_folder = dfsu_folder.strip('\'"')
+    dfsu_folder = remove_quotes(input("Enter output .dfsu folder path: "))
     
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfsu_folder):
@@ -76,9 +91,7 @@ def prompt_user():
         sys.exit(1)
     
     # Prompt for template .mfm file from input-mfm folder
-    mfm_file = input("Enter template .mfm file name (from input-mfm folder): ").strip()
-    # Strip surrounding quotes (common on Windows when paths have spaces)
-    mfm_file = mfm_file.strip('\'"')
+    mfm_file = remove_quotes(input("Enter template .mfm file name (from input-mfm folder): "))
     
     # Construct full path to template
     template_path = os.path.join('input-mfm', mfm_file)
