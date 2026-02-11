@@ -45,7 +45,8 @@ python edit_mfm.py
 The script will prompt you for:
 1. **Input .dfs0 folder**: Directory (folder) containing the .dfs0 file to reference
    - ⚠️ **Important**: Provide the folder path, not the .dfs0 file path itself
-   - Example: `C:\Projects\MyProject\Input` (not `C:\Projects\MyProject\Input\file.dfs0`)
+   - Example (Windows): `C:\Projects\MyProject\Input` (not `C:\Projects\MyProject\Input\file.dfs0`)
+   - Example (Unix/Linux): `/home/user/projects/input` (not `/home/user/projects/input/file.dfs0`)
 2. **Output .dfsu folder**: Directory where the output .dfsu file will be saved
 3. **Template .mfm file name**: Name of the template file from the `input-mfm` folder
 

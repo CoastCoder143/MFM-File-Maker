@@ -32,7 +32,7 @@ def prompt_user():
     
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfs0_folder):
-        if dfs0_folder.endswith('.dfs0'):
+        if dfs0_folder.lower().endswith('.dfs0'):
             print(f"Error: You provided a .dfs0 file path, but a folder path is required.")
             print(f"Please provide the folder containing the .dfs0 file.")
             print(f"Example: Instead of '{dfs0_folder}'")
