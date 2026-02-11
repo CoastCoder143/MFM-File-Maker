@@ -30,16 +30,22 @@ def prompt_user():
     # Prompt for input .dfs0 folder
     dfs0_folder = input("Enter input .dfs0 folder path: ").strip()
     
+    # Check if user provided a .dfs0 file path (even if it doesn't exist)
+    if dfs0_folder.lower().endswith('.dfs0'):
+        print(f"Error: You provided a .dfs0 file path, but a folder path is required.")
+        print(f"Please provide the folder containing the .dfs0 file.")
+        print(f"Example: Instead of '{dfs0_folder}'")
+        print(f"         Use: '{os.path.dirname(dfs0_folder) if os.path.dirname(dfs0_folder) else '.'}'")
+        sys.exit(1)
+    
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfs0_folder):
-        if dfs0_folder.lower().endswith('.dfs0'):
-            print(f"Error: You provided a .dfs0 file path, but a folder path is required.")
-            print(f"Please provide the folder containing the .dfs0 file.")
-            print(f"Example: Instead of '{dfs0_folder}'")
-            print(f"         Use: '{os.path.dirname(dfs0_folder)}'")
-        else:
-            print(f"Error: You provided a file path, but a folder path is required.")
-            print(f"Please provide the folder path instead.")
+        parent_dir = os.path.dirname(dfs0_folder)
+        example_dir = parent_dir if parent_dir else '.'
+        print(f"Error: You provided a file path, but a folder path is required.")
+        print(f"Please provide the folder path instead.")
+        print(f"Example: Instead of '{dfs0_folder}'")
+        print(f"         Use: '{example_dir}'")
         sys.exit(1)
     
     if not os.path.isdir(dfs0_folder):
@@ -52,8 +58,12 @@ def prompt_user():
     
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfsu_folder):
+        parent_dir = os.path.dirname(dfsu_folder)
+        example_dir = parent_dir if parent_dir else '.' 
         print(f"Error: You provided a file path, but a folder path is required.")
         print(f"Please provide the folder path where .dfsu files will be saved.")
+        print(f"Example: Instead of '{dfsu_folder}'")
+        print(f"         Use: '{example_dir}'")
         sys.exit(1)
     
     if not os.path.isdir(dfsu_folder):
