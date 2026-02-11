@@ -118,17 +118,19 @@ def find_first_section_after(sections, after_name, target_name):
 
 def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
     """Update file_name in the specified section."""
-    # Pattern captures: (indent)(value_without_pipe)(pipe)(rest_after_pipe)
-    file_name_pattern = re.compile(r'^(\s*)file_name\s*=\s*"([^"|]*)\|?"(.*)$')
+    # Pattern captures: (indent)(spacing_before_eq)(spacing_after_eq)(value_without_pipe)(rest_after_closing_quote)
+    file_name_pattern = re.compile(r'^(\s*)file_name(\s*)=(\s*)"([^"|]*)\|?"(.*)$')
     
     updated = False
     for i in range(section['start'], section['end'] + 1):
         match = file_name_pattern.match(lines[i])
         if match:
             indent = match.group(1)
-            rest = match.group(3)
+            space_before_eq = match.group(2)
+            space_after_eq = match.group(3)
+            rest = match.group(5)
             pipe = '|' if preserve_pipe else ''
-            lines[i] = f'{indent}file_name = "{new_value}{pipe}"{rest}\n'
+            lines[i] = f'{indent}file_name{space_before_eq}={space_after_eq}"{new_value}{pipe}"{rest}\n'
             updated = True
             break
     
