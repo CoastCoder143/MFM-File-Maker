@@ -29,14 +29,36 @@ def prompt_user():
     
     # Prompt for input .dfs0 folder
     dfs0_folder = input("Enter input .dfs0 folder path: ").strip()
+    
+    # Check if user provided a file instead of a folder
+    if os.path.isfile(dfs0_folder):
+        if dfs0_folder.endswith('.dfs0'):
+            print(f"Error: You provided a .dfs0 file path, but a folder path is required.")
+            print(f"Please provide the folder containing the .dfs0 file.")
+            print(f"Example: Instead of '{dfs0_folder}'")
+            print(f"         Use: '{os.path.dirname(dfs0_folder)}'")
+        else:
+            print(f"Error: You provided a file path, but a folder path is required.")
+            print(f"Please provide the folder path instead.")
+        sys.exit(1)
+    
     if not os.path.isdir(dfs0_folder):
         print(f"Error: '{dfs0_folder}' is not a valid directory")
+        print(f"Please provide a valid folder path containing .dfs0 files.")
         sys.exit(1)
     
     # Prompt for output .dfsu folder
     dfsu_folder = input("Enter output .dfsu folder path: ").strip()
+    
+    # Check if user provided a file instead of a folder
+    if os.path.isfile(dfsu_folder):
+        print(f"Error: You provided a file path, but a folder path is required.")
+        print(f"Please provide the folder path where .dfsu files will be saved.")
+        sys.exit(1)
+    
     if not os.path.isdir(dfsu_folder):
         print(f"Error: '{dfsu_folder}' is not a valid directory")
+        print(f"Please provide a valid folder path for output .dfsu files.")
         sys.exit(1)
     
     # Prompt for template .mfm file from input-mfm folder

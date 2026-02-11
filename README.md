@@ -32,12 +32,20 @@ MFM-File-Maker/
 
 Run the script and follow the prompts:
 
+**On Unix/Linux/macOS:**
 ```bash
 python3 edit_mfm.py
 ```
 
+**On Windows:**
+```bash
+python edit_mfm.py
+```
+
 The script will prompt you for:
-1. **Input .dfs0 folder**: Directory containing the .dfs0 file to reference
+1. **Input .dfs0 folder**: Directory (folder) containing the .dfs0 file to reference
+   - ⚠️ **Important**: Provide the folder path, not the .dfs0 file path itself
+   - Example: `C:\Projects\MyProject\Input` (not `C:\Projects\MyProject\Input\file.dfs0`)
 2. **Output .dfsu folder**: Directory where the output .dfsu file will be saved
 3. **Template .mfm file name**: Name of the template file from the `input-mfm` folder
 
@@ -97,7 +105,7 @@ The script will abort with an error message if:
 A test dataset is provided in the `test_data/` directory, and a sample template is in `input-mfm/`:
 
 ```bash
-# Run the script with test data
+# Run the script with test data (use 'python' on Windows, 'python3' on Unix/Linux/macOS)
 python3 edit_mfm.py
 # Then enter:
 # test_data/input_dfs0
