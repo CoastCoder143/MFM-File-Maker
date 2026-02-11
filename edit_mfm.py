@@ -25,14 +25,27 @@ from pathlib import Path
 def remove_quotes(s):
     """
     Remove matching outer quotes from a string.
-    Only removes quotes if they match (both single or both double).
     
+    This function strips whitespace first, then removes only matching outer quotes
+    (both single or both double). Non-matching quotes are preserved.
+    
+    Args:
+        s: Input string that may have quotes
+        
+    Returns:
+        String with matching outer quotes removed
+        
     Examples:
-        "path" -> path
-        'path' -> path
-        "'path'" -> 'path'
-        '"path"' -> "path"
-        path -> path (no change)
+        >>> remove_quotes('"path"')
+        'path'
+        >>> remove_quotes("'path'")
+        'path'
+        >>> remove_quotes("path")
+        'path'
+        >>> remove_quotes('"\'path\'"')
+        "'path'"
+        >>> remove_quotes('"path\'')
+        '"path\''
     """
     s = s.strip()
     if len(s) >= 2:
