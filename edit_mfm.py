@@ -59,7 +59,7 @@ def prompt_user():
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfsu_folder):
         parent_dir = os.path.dirname(dfsu_folder)
-        example_dir = parent_dir if parent_dir else '.' 
+        example_dir = parent_dir if parent_dir else '.'
         print(f"Error: You provided a file path, but a folder path is required.")
         print(f"Please provide the folder path where .dfsu files will be saved.")
         print(f"Example: Instead of '{dfsu_folder}'")
