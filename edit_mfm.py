@@ -6,6 +6,11 @@ This script edits MIKE .mfm files by updating file paths in specific sections:
 1. [DREDGER_1] section: Updates file_name with matching .dfs0 file
 2. [MORPHOLOGY] -> [OUTPUTS] -> [OUTPUT_1]: Updates file_name with output .dfsu path
 
+The script uses a template-based workflow:
+- Template .mfm files are stored in the 'input-mfm' folder
+- Generated .mfm files are saved to the 'output' folder
+- The script duplicates templates and processes them
+
 Usage:
     python edit_mfm.py
 """
@@ -13,6 +18,7 @@ Usage:
 import os
 import sys
 import re
+import shutil
 from pathlib import Path
 
 
@@ -33,13 +39,16 @@ def prompt_user():
         print(f"Error: '{dfsu_folder}' is not a valid directory")
         sys.exit(1)
     
-    # Prompt for .mfm file
-    mfm_file = input("Enter .mfm file path: ").strip()
-    if not os.path.isfile(mfm_file):
-        print(f"Error: '{mfm_file}' is not a valid file")
+    # Prompt for template .mfm file from input-mfm folder
+    mfm_file = input("Enter template .mfm file name (from input-mfm folder): ").strip()
+    
+    # Construct full path to template
+    template_path = os.path.join('input-mfm', mfm_file)
+    if not os.path.isfile(template_path):
+        print(f"Error: '{template_path}' is not a valid file")
         sys.exit(1)
     
-    return dfs0_folder, dfsu_folder, mfm_file
+    return dfs0_folder, dfsu_folder, template_path
 
 
 def find_dfs0_file(folder):
@@ -139,14 +148,23 @@ def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
         sys.exit(1)
 
 
-def edit_mfm_file(dfs0_folder, dfsu_folder, mfm_file):
+def edit_mfm_file(dfs0_folder, dfsu_folder, template_path):
     """Edit the .mfm file with the specified changes."""
     # Find the .dfs0 file
     dfs0_file = find_dfs0_file(dfs0_folder)
     print(f"Found .dfs0 file: {dfs0_file}")
     
-    # Read the .mfm file
-    with open(mfm_file, 'r') as f:
+    # Create output folder if it doesn't exist
+    os.makedirs('output', exist_ok=True)
+    
+    # Copy template to output folder
+    template_basename = os.path.basename(template_path)
+    output_path = os.path.join('output', template_basename)
+    shutil.copy2(template_path, output_path)
+    print(f"Copied template to: {output_path}")
+    
+    # Read the .mfm file from output folder
+    with open(output_path, 'r') as f:
         lines = f.readlines()
     
     # Parse sections
@@ -179,26 +197,26 @@ def edit_mfm_file(dfs0_folder, dfsu_folder, mfm_file):
     # This is the one that belongs to MORPHOLOGY
     output1_section = min(output1_sections, key=lambda s: s['start'])
     
-    # Generate output file name: <output_folder>\<mfm_basename>.dfsu
-    mfm_basename = os.path.splitext(os.path.basename(mfm_file))[0]
+    # Generate output file name: <output_folder>/<mfm_basename>.dfsu
+    mfm_basename = os.path.splitext(os.path.basename(output_path))[0]
     dfsu_filename = f"{mfm_basename}.dfsu"
     dfsu_path = os.path.join(dfsu_folder, dfsu_filename)
     
     update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
     print(f"Updated [OUTPUT_1] file_name to: {dfsu_path}")
     
-    # Write back to file
-    with open(mfm_file, 'w') as f:
+    # Write back to file in output folder
+    with open(output_path, 'w') as f:
         f.writelines(lines)
     
-    print(f"\nSuccessfully updated {mfm_file}")
+    print(f"\nSuccessfully created and updated {output_path}")
 
 
 def main():
     """Main entry point."""
     try:
-        dfs0_folder, dfsu_folder, mfm_file = prompt_user()
-        edit_mfm_file(dfs0_folder, dfsu_folder, mfm_file)
+        dfs0_folder, dfsu_folder, template_path = prompt_user()
+        edit_mfm_file(dfs0_folder, dfsu_folder, template_path)
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")
         sys.exit(1)
