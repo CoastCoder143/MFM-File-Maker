@@ -29,6 +29,8 @@ def prompt_user():
     
     # Prompt for input .dfs0 folder
     dfs0_folder = input("Enter input .dfs0 folder path: ").strip()
+    # Strip surrounding quotes (common on Windows when paths have spaces)
+    dfs0_folder = dfs0_folder.strip('"').strip("'")
     
     # Check if user provided a .dfs0 file path (even if it doesn't exist)
     if dfs0_folder.lower().endswith('.dfs0'):
@@ -55,6 +57,8 @@ def prompt_user():
     
     # Prompt for output .dfsu folder
     dfsu_folder = input("Enter output .dfsu folder path: ").strip()
+    # Strip surrounding quotes (common on Windows when paths have spaces)
+    dfsu_folder = dfsu_folder.strip('"').strip("'")
     
     # Check if user provided a file instead of a folder
     if os.path.isfile(dfsu_folder):
@@ -73,6 +77,8 @@ def prompt_user():
     
     # Prompt for template .mfm file from input-mfm folder
     mfm_file = input("Enter template .mfm file name (from input-mfm folder): ").strip()
+    # Strip surrounding quotes (common on Windows when paths have spaces)
+    mfm_file = mfm_file.strip('"').strip("'")
     
     # Construct full path to template
     template_path = os.path.join('input-mfm', mfm_file)

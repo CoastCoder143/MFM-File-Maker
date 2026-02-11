@@ -47,6 +47,7 @@ The script will prompt you for:
    - ⚠️ **Important**: Provide the folder path, not the .dfs0 file path itself
    - Example (Windows): `C:\Projects\MyProject\Input` (not `C:\Projects\MyProject\Input\file.dfs0`)
    - Example (Unix/Linux): `/home/user/projects/input` (not `/home/user/projects/input/file.dfs0`)
+   - 💡 **Tip**: You can use quotes around paths with spaces: `"C:\Path With Spaces\Input"`
 2. **Output .dfsu folder**: Directory where the output .dfsu file will be saved
 3. **Template .mfm file name**: Name of the template file from the `input-mfm` folder
 
