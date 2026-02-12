@@ -363,37 +363,52 @@ def parse_mfm_sections(lines):
 
 
 def find_section_by_name(sections, name):
-    """Find section by name."""
+    """
+    Find section by name.
+    
+    Returns:
+        Section dict if found and unique, None if not found
+        
+    Raises:
+        ValueError: If multiple sections with the same name are found (ambiguous)
+    """
     matches = [s for s in sections if s['name'] == name]
     if len(matches) == 0:
         return None
     elif len(matches) > 1:
-        print(f"Error: Multiple '{name}' sections found - ambiguous")
-        sys.exit(1)
+        raise ValueError(f"Multiple '{name}' sections found - ambiguous")
     return matches[0]
 
 
 def find_first_section_after(sections, after_name, target_name):
-    """Find the first occurrence of target_name section after after_name section."""
+    """
+    Find the first occurrence of target_name section after after_name section.
+    
+    Raises:
+        ValueError: If after_name section is not found or no target_name section exists after it
+    """
     after_section = find_section_by_name(sections, after_name)
     if after_section is None:
-        print(f"Error: Section '{after_name}' not found")
-        sys.exit(1)
+        raise ValueError(f"Section '{after_name}' not found")
     
     # Find all target sections that start after the after_section
     matching = [s for s in sections 
                 if s['name'] == target_name and s['start'] > after_section['end']]
     
     if len(matching) == 0:
-        print(f"Error: No '{target_name}' section found after '{after_name}'")
-        sys.exit(1)
+        raise ValueError(f"No '{target_name}' section found after '{after_name}'")
     
     # Return the first one (earliest start position)
     return min(matching, key=lambda s: s['start'])
 
 
 def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
-    """Update file_name in the specified section."""
+    """
+    Update file_name in the specified section.
+    
+    Raises:
+        ValueError: If no file_name entry is found in the section
+    """
     # Pattern captures: (indent)(spacing_before_eq)(spacing_after_eq)(value_without_pipe)(rest_after_closing_quote)
     file_name_pattern = re.compile(r'^(\s*)file_name(\s*)=(\s*)"([^"|]*)\|?"(.*)$')
     
@@ -411,8 +426,7 @@ def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
             break
     
     if not updated:
-        print(f"Error: No file_name found in section {section['name']}")
-        sys.exit(1)
+        raise ValueError(f"No file_name found in section {section['name']}")
 
 
 def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):
@@ -426,66 +440,76 @@ def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):
         template_path: Path to the template .mfm file
         
     Returns:
-        Path to the created output .mfm file
+        tuple: (success: bool, output_path: str or None, error_msg: str or None)
     """
-    # Create output folder if it doesn't exist
-    os.makedirs('output', exist_ok=True)
-    
-    # Generate output filename: include dfs0 basename for uniqueness
-    template_basename = os.path.splitext(os.path.basename(template_path))[0]
-    dfs0_basename = os.path.splitext(dfs0_file)[0]
-    
-    # Output filename: template_basename_dfs0_basename.mfm
-    output_filename = f"{template_basename}_{dfs0_basename}.mfm"
-    output_path = os.path.join('output', output_filename)
-    
-    # Copy template to output folder with new name
-    shutil.copy2(template_path, output_path)
-    
-    # Read the .mfm file from output folder
-    with open(output_path, 'r') as f:
-        lines = f.readlines()
-    
-    # Parse sections
-    sections = parse_mfm_sections(lines)
-    
-    # A) Update [DREDGER_1] section
-    dredger_section = find_section_by_name(sections, '[DREDGER_1]')
-    if dredger_section is None:
-        print(f"Warning: [DREDGER_1] section not found in {output_filename}")
-    else:
-        dfs0_path = os.path.join(dfs0_folder, dfs0_file)
-        update_file_name_in_section(lines, dredger_section, dfs0_path, preserve_pipe=True)
-    
-    # B) Update [MORPHOLOGY] -> [OUTPUTS] -> [OUTPUT_1]
     try:
-        # First find [OUTPUTS] after [MORPHOLOGY]
-        outputs_section = find_first_section_after(sections, '[MORPHOLOGY]', '[OUTPUTS]')
+        # Create output folder if it doesn't exist
+        os.makedirs('output', exist_ok=True)
         
-        # Re-parse sections within the OUTPUTS section to find [OUTPUT_1]
-        output1_sections = [s for s in sections 
-                            if s['name'] == '[OUTPUT_1]' and s['start'] > outputs_section['start']]
+        # Generate output filename: include dfs0 basename for uniqueness
+        template_basename = os.path.splitext(os.path.basename(template_path))[0]
+        dfs0_basename = os.path.splitext(dfs0_file)[0]
         
-        if len(output1_sections) == 0:
-            print(f"Warning: No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS] in {output_filename}")
+        # Output filename: template_basename_dfs0_basename.mfm
+        output_filename = f"{template_basename}_{dfs0_basename}.mfm"
+        output_path = os.path.join('output', output_filename)
+        
+        # Copy template to output folder with new name
+        shutil.copy2(template_path, output_path)
+        
+        # Read the .mfm file from output folder
+        with open(output_path, 'r') as f:
+            lines = f.readlines()
+        
+        # Parse sections
+        sections = parse_mfm_sections(lines)
+        
+        # A) Update [DREDGER_1] section
+        dredger_section = find_section_by_name(sections, '[DREDGER_1]')
+        if dredger_section is None:
+            return (False, None, "[DREDGER_1] section not found in template")
         else:
-            # Find the first OUTPUT_1 that is within or right after the OUTPUTS section
-            output1_section = min(output1_sections, key=lambda s: s['start'])
+            dfs0_path = os.path.join(dfs0_folder, dfs0_file)
+            try:
+                update_file_name_in_section(lines, dredger_section, dfs0_path, preserve_pipe=True)
+            except ValueError as e:
+                return (False, None, str(e))
+        
+        # B) Update [MORPHOLOGY] -> [OUTPUTS] -> [OUTPUT_1]
+        try:
+            # First find [OUTPUTS] after [MORPHOLOGY]
+            outputs_section = find_first_section_after(sections, '[MORPHOLOGY]', '[OUTPUTS]')
             
-            # Generate output dfsu file name: based on output mfm filename
-            mfm_basename = os.path.splitext(output_filename)[0]
-            dfsu_filename = f"{mfm_basename}.dfsu"
-            dfsu_path = os.path.join(dfsu_folder, dfsu_filename)
+            # Re-parse sections within the OUTPUTS section to find [OUTPUT_1]
+            output1_sections = [s for s in sections 
+                                if s['name'] == '[OUTPUT_1]' and s['start'] > outputs_section['start']]
             
-            update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
+            if len(output1_sections) == 0:
+                return (False, None, "No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS]")
+            else:
+                # Find the first OUTPUT_1 that is within or right after the OUTPUTS section
+                output1_section = min(output1_sections, key=lambda s: s['start'])
+                
+                # Generate output dfsu file name: based on output mfm filename
+                mfm_basename = os.path.splitext(output_filename)[0]
+                dfsu_filename = f"{mfm_basename}.dfsu"
+                dfsu_path = os.path.join(dfsu_folder, dfsu_filename)
+                
+                try:
+                    update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
+                except ValueError as e:
+                    return (False, None, str(e))
+        except Exception as e:
+            return (False, None, f"Could not update [OUTPUT_1]: {str(e)}")
+        
+        # Write back to file in output folder
+        with open(output_path, 'w') as f:
+            f.writelines(lines)
+        
+        return (True, output_path, None)
+    
     except Exception as e:
-        print(f"Warning: Could not update [OUTPUT_1] in {output_filename}: {e}")
-    
-    # Write back to file in output folder
-    with open(output_path, 'w') as f:
-        f.writelines(lines)
-    
-    return output_path
+        return (False, None, f"Unexpected error: {str(e)}")
 
 
 def edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode=False):
@@ -508,9 +532,14 @@ def edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode=False):
         # Single file processing
         dfs0_file = dfs0_files[0]
         print(f"\nProcessing: {dfs0_file}")
-        output_path = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
-        print(f"✓ Created: {output_path}")
-        print(f"\nSuccessfully processed 1 file")
+        success, output_path, error_msg = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
+        
+        if success:
+            print(f"✓ Created: {output_path}")
+            print(f"\nSuccessfully processed 1 file")
+        else:
+            print(f"✗ Failed: {error_msg}")
+            sys.exit(1)
     else:
         # Batch processing multiple files
         print(f"\nProcessing {len(dfs0_files)} files...")
@@ -518,22 +547,27 @@ def edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode=False):
         
         successful = 0
         failed = 0
+        failed_files = []
         
         for i, dfs0_file in enumerate(dfs0_files, 1):
-            try:
-                print(f"\n[{i}/{len(dfs0_files)}] Processing: {dfs0_file}")
-                output_path = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
+            print(f"\n[{i}/{len(dfs0_files)}] Processing: {dfs0_file}")
+            success, output_path, error_msg = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
+            
+            if success:
                 print(f"    ✓ Created: {os.path.basename(output_path)}")
                 successful += 1
-            except Exception as e:
-                print(f"    ✗ Failed: {e}")
+            else:
+                print(f"    ✗ Failed: {error_msg}")
                 failed += 1
+                failed_files.append((dfs0_file, error_msg))
         
         print("\n" + "=" * 60)
         print(f"Processing complete: {successful} successful, {failed} failed")
         
         if failed > 0:
-            print(f"Warning: {failed} file(s) failed to process")
+            print(f"\nFailed files:")
+            for filename, error in failed_files:
+                print(f"  - {filename}: {error}")
 
 
 def main():
