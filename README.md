@@ -135,6 +135,7 @@ The script supports two processing modes:
 **Single File Mode:**
 - Processes one .dfs0 file with the template
 - Output filename: `template_basename.mfm`
+- Exits with error if processing fails
 - Backward compatible with original behavior
 
 **Multiple File Mode:**
@@ -144,12 +145,32 @@ The script supports two processing modes:
 - Options:
   - Process all .dfs0 files in the folder
   - Select specific files by number (e.g., `1,3,5`)
+- **Robust error handling**: Continues processing remaining files even if individual files fail
 - Progress tracking with success/failure counts
+- Detailed error report at the end listing all failed files and their errors
 
 **Use Cases for Batch Processing:**
 - Generate multiple scenarios from the same template
 - Process time-series data (e.g., `file_12am.dfs0`, `file_3am.dfs0`, `file_6am.dfs0`)
 - Handle multiple locations with one template (e.g., `location1.dfs0`, `location2.dfs0`)
+
+**Error Handling in Batch Mode:**
+When processing multiple files, the script will:
+1. Continue processing remaining files even if one fails
+2. Track which files succeeded and which failed
+3. Display detailed error messages for each failure
+4. Provide a summary at the end showing success/failure counts
+5. List all failed files with their specific error messages
+
+Example output with failures:
+```
+Processing complete: 43 successful, 3 failed
+
+Failed files:
+  - file1.dfs0: No file_name found in section [DREDGER_1]
+  - file2.dfs0: Section [MORPHOLOGY] not found
+  - file3.dfs0: No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS]
+```
 
 ### Section-Aware Parsing
 

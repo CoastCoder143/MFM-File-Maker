@@ -499,7 +499,7 @@ def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):
                     update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
                 except ValueError as e:
                     return (False, None, str(e))
-        except Exception as e:
+        except ValueError as e:
             return (False, None, f"Could not update [OUTPUT_1]: {str(e)}")
         
         # Write back to file in output folder
@@ -508,8 +508,12 @@ def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):
         
         return (True, output_path, None)
     
-    except Exception as e:
-        return (False, None, f"Unexpected error: {str(e)}")
+    except (IOError, OSError) as e:
+        # File I/O errors
+        return (False, None, f"File error: {str(e)}")
+    except ValueError as e:
+        # Section/parsing errors from our functions
+        return (False, None, str(e))
 
 
 def edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode=False):
