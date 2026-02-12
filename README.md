@@ -82,7 +82,7 @@ The script parses the .mfm file into sections (e.g., `[DREDGER_1]`, `[MORPHOLOGY
 
 1. **DREDGER_1 Update**: 
    - Finds the `[DREDGER_1]` section
-   - Locates exactly one .dfs0 file in the input folder
+   - Locates .dfs0 file in the input folder (see "Smart File Matching" below)
    - Updates `file_name = "path"` with the full path to the .dfs0 file
    - Preserves the trailing pipe character: `file_name = "path/file.dfs0|"`
 
@@ -93,10 +93,34 @@ The script parses the .mfm file into sections (e.g., `[DREDGER_1]`, `[MORPHOLOGY
    - Updates `file_name = "path"` with the output .dfsu file path constructed from the output folder and the .mfm file's base name (e.g., `output_folder/template.dfsu` for `template.mfm`)
    - Does NOT preserve the pipe character
 
+### Smart File Matching
+
+When there are multiple .dfs0 files in the input folder, the script uses intelligent matching:
+
+1. **Auto-matching**: Attempts to match the template filename to a .dfs0 file
+   - Example: Template `MT2D_202602_SI-CB1_3am.mfm` → Auto-selects `40_SI-CB1_3am.dfs0`
+   - Extracts meaningful parts from the template name (ignoring dates and common prefixes)
+   - Searches for .dfs0 files containing matching patterns
+
+2. **Interactive Selection**: If multiple matches are found or no match is found:
+   - Lists all .dfs0 files in the folder with numbers
+   - Prompts user to select the correct file
+   - Example:
+     ```
+     All .dfs0 files in 'data/input':
+       1. file1.dfs0
+       2. file2.dfs0
+       3. file3.dfs0
+     
+     Enter the number of the file to use (or 'q' to quit): 
+     ```
+
+3. **Single File**: If only one .dfs0 file exists, uses it automatically
+
 ### Error Handling
 
 The script will abort with an error message if:
-- The input .dfs0 folder doesn't exist or contains zero or multiple .dfs0 files (ambiguous)
+- The input .dfs0 folder doesn't exist or contains zero .dfs0 files
 - The output .dfsu folder doesn't exist
 - The template .mfm file doesn't exist in the `input-mfm` folder
 - Required sections (`[DREDGER_1]`, `[MORPHOLOGY]`, `[OUTPUTS]`, `[OUTPUT_1]`) are missing
