@@ -43,15 +43,18 @@ python edit_mfm.py
 ```
 
 The script will prompt you for:
-1. **Input .dfs0 folder**: Directory (folder) containing the .dfs0 file to reference
+1. **Input .dfs0 folder**: Directory (folder) containing the .dfs0 file(s) to reference
    - ⚠️ **Important**: Provide the folder path, not the .dfs0 file path itself
    - Example (Windows): `C:\Projects\MyProject\Input` (not `C:\Projects\MyProject\Input\file.dfs0`)
    - Example (Unix/Linux): `/home/user/projects/input` (not `/home/user/projects/input/file.dfs0`)
    - 💡 **Tip**: You can use quotes around paths with spaces: `"C:\Path With Spaces\Input"`
-2. **Output .dfsu folder**: Directory where the output .dfsu file will be saved
+2. **Output .dfsu folder**: Directory where the output .dfsu file(s) will be saved
 3. **Template .mfm file name**: Name of the template file from the `input-mfm` folder
+4. **Processing mode**: Choose between:
+   - **Single file mode (S)**: Process one .dfs0 file (original behavior)
+   - **Multiple file mode (M)**: Batch process multiple .dfs0 files with the same template
 
-### Example
+### Single File Mode Example
 
 ```
 MIKE .mfm File Editor
@@ -60,12 +63,61 @@ Enter input .dfs0 folder path: test_data/input_dfs0
 Enter output .dfsu folder path: test_data/output_dfsu
 Enter template .mfm file name (from input-mfm folder): template.mfm
 
-Found .dfs0 file: dredger_data.dfs0
-Copied template to: output/template.mfm
-Updated [DREDGER_1] file_name to: test_data/input_dfs0/dredger_data.dfs0|
-Updated [OUTPUT_1] file_name to: test_data/output_dfsu/template.dfsu
+==================================================
+Process [M]ultiple .dfs0 files or [S]ingle file? (M/S): S
 
-Successfully created and updated output/template.mfm
+Processing: dredger_data.dfs0
+✓ Created: output/template_dredger_data.mfm
+
+Successfully processed 1 file
+```
+
+### Batch Processing Mode Example
+
+Process all files or select specific ones:
+
+```
+MIKE .mfm File Editor
+==================================================
+Enter input .dfs0 folder path: test_data/multi_dfs0
+Enter output .dfsu folder path: test_data/output_dfsu
+Enter template .mfm file name (from input-mfm folder): template.mfm
+
+==================================================
+Process [M]ultiple .dfs0 files or [S]ingle file? (M/S): M
+
+Found 6 .dfs0 files in 'test_data/multi_dfs0'
+
+Process [A]ll files, [S]elect specific files, or [Q]uit? A
+Selected all 6 files for processing
+
+Processing 6 files...
+============================================================
+
+[1/6] Processing: file1.dfs0
+    ✓ Created: template_file1.mfm
+
+[2/6] Processing: file2.dfs0
+    ✓ Created: template_file2.mfm
+
+...
+
+============================================================
+Processing complete: 6 successful, 0 failed
+```
+
+**Selective file processing:**
+```
+Process [A]ll files, [S]elect specific files, or [Q]uit? S
+
+All .dfs0 files in 'test_data/multi_dfs0':
+  1. file1.dfs0
+  2. file2.dfs0
+  3. file3.dfs0
+  4. file4.dfs0
+
+Enter file numbers separated by commas (e.g., 1,3,5) or 'all': 1,3,4
+Selected 3 file(s): file1.dfs0, file3.dfs0, file4.dfs0
 ```
 
 ## How It Works
@@ -75,6 +127,29 @@ Successfully created and updated output/template.mfm
 1. **Template Storage**: Store your template .mfm files in the `input-mfm` folder with placeholder paths (e.g., `"placeholder.dfs0|"`)
 2. **Duplication**: The script copies the template to the `output` folder
 3. **Path Updates**: The script performs section-order-aware edits on the copied file
+
+### Batch Processing
+
+The script supports two processing modes:
+
+**Single File Mode:**
+- Processes one .dfs0 file with the template
+- Output filename: `template_basename.mfm`
+- Backward compatible with original behavior
+
+**Multiple File Mode:**
+- Reuse the same template for multiple .dfs0 files
+- Each .dfs0 file generates its own .mfm file
+- Output filename: `template_basename_dfs0_basename.mfm`
+- Options:
+  - Process all .dfs0 files in the folder
+  - Select specific files by number (e.g., `1,3,5`)
+- Progress tracking with success/failure counts
+
+**Use Cases for Batch Processing:**
+- Generate multiple scenarios from the same template
+- Process time-series data (e.g., `file_12am.dfs0`, `file_3am.dfs0`, `file_6am.dfs0`)
+- Handle multiple locations with one template (e.g., `location1.dfs0`, `location2.dfs0`)
 
 ### Section-Aware Parsing
 
@@ -90,14 +165,15 @@ The script parses the .mfm file into sections (e.g., `[DREDGER_1]`, `[MORPHOLOGY
    - Finds the `[MORPHOLOGY]` section
    - Locates the first `[OUTPUTS]` section that appears after `[MORPHOLOGY]`
    - Within that scope, finds the `[OUTPUT_1]` section
-   - Updates `file_name = "path"` with the output .dfsu file path constructed from the output folder and the .mfm file's base name (e.g., `output_folder/template.dfsu` for `template.mfm`)
+   - Updates `file_name = "path"` with the output .dfsu file path
+   - In batch mode: Each output file gets a unique name (e.g., `template_file1.dfsu`, `template_file2.dfsu`)
    - Does NOT preserve the pipe character
 
 ### Smart File Matching
 
 When there are multiple .dfs0 files in the input folder, the script uses intelligent matching:
 
-1. **Auto-matching**: Attempts to match the template filename to a .dfs0 file
+1. **Auto-matching** (Single File Mode): Attempts to match the template filename to a .dfs0 file
    - Example: Template `MT2D_202602_SI-CB1_3am.mfm` → Auto-selects `40_SI-CB1_3am.dfs0`
    - Extracts meaningful parts from the template name (ignoring dates and common prefixes)
    - Searches for .dfs0 files containing matching patterns
