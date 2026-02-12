@@ -163,6 +163,17 @@ def prompt_user():
         list_available_templates()
         sys.exit(1)
     
+    # Validate template structure before processing
+    try:
+        validate_template(template_path)
+    except ValueError as e:
+        print(f"Error: Invalid template file.")
+        print(str(e))
+        sys.exit(1)
+    except IOError as e:
+        print(f"Error: {e}")
+        sys.exit(1)
+    
     # Ask if user wants batch mode
     print("\n" + "=" * 50)
     batch_mode = False
@@ -427,6 +438,90 @@ def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
     
     if not updated:
         raise ValueError(f"No file_name found in section {section['name']}")
+
+
+def validate_template(template_path):
+    """
+    Validate that the template file has required sections and file_name entries.
+    
+    Args:
+        template_path: Path to the template .mfm file
+        
+    Raises:
+        ValueError: If template is missing required sections or file_name entries
+        IOError: If template file cannot be read
+    """
+    try:
+        with open(template_path, 'r') as f:
+            lines = f.readlines()
+    except (IOError, OSError) as e:
+        raise IOError(f"Cannot read template file '{template_path}': {e}")
+    
+    # Parse sections
+    sections = parse_mfm_sections(lines)
+    
+    # Check for required [DREDGER_1] section
+    dredger_section = find_section_by_name(sections, '[DREDGER_1]')
+    if dredger_section is None:
+        raise ValueError(
+            f"Template '{template_path}' is missing required [DREDGER_1] section.\n"
+            "Please ensure your template has a [DREDGER_1] section with a file_name entry."
+        )
+    
+    # Check for file_name in [DREDGER_1]
+    file_name_pattern = re.compile(r'^\s*file_name\s*=\s*"[^"]*"')
+    has_file_name = False
+    for i in range(dredger_section['start'], dredger_section['end'] + 1):
+        if file_name_pattern.match(lines[i]):
+            has_file_name = True
+            break
+    
+    if not has_file_name:
+        raise ValueError(
+            f"Template '{template_path}' is missing file_name in [DREDGER_1] section.\n"
+            "Please add a line like: file_name = \"placeholder.dfs0|\" in the [DREDGER_1] section."
+        )
+    
+    # Check for [MORPHOLOGY] section
+    morphology_section = find_section_by_name(sections, '[MORPHOLOGY]')
+    if morphology_section is None:
+        raise ValueError(
+            f"Template '{template_path}' is missing required [MORPHOLOGY] section.\n"
+            "Please ensure your template has a [MORPHOLOGY] section."
+        )
+    
+    # Check for [OUTPUTS] after [MORPHOLOGY]
+    try:
+        outputs_section = find_first_section_after(sections, '[MORPHOLOGY]', '[OUTPUTS]')
+    except ValueError:
+        raise ValueError(
+            f"Template '{template_path}' is missing [OUTPUTS] section after [MORPHOLOGY].\n"
+            "Please ensure your template has an [OUTPUTS] section after the [MORPHOLOGY] section."
+        )
+    
+    # Check for [OUTPUT_1] after [OUTPUTS]
+    output1_sections = [s for s in sections 
+                        if s['name'] == '[OUTPUT_1]' and s['start'] > outputs_section['start']]
+    
+    if len(output1_sections) == 0:
+        raise ValueError(
+            f"Template '{template_path}' is missing [OUTPUT_1] section after [MORPHOLOGY] -> [OUTPUTS].\n"
+            "Please ensure your template has an [OUTPUT_1] section after the [OUTPUTS] section."
+        )
+    
+    # Check for file_name in [OUTPUT_1]
+    output1_section = min(output1_sections, key=lambda s: s['start'])
+    has_file_name = False
+    for i in range(output1_section['start'], output1_section['end'] + 1):
+        if file_name_pattern.match(lines[i]):
+            has_file_name = True
+            break
+    
+    if not has_file_name:
+        raise ValueError(
+            f"Template '{template_path}' is missing file_name in [OUTPUT_1] section.\n"
+            "Please add a line like: file_name = \"placeholder.dfsu\" in the [OUTPUT_1] section."
+        )
 
 
 def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):

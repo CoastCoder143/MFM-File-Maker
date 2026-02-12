@@ -156,11 +156,21 @@ The script supports two processing modes:
 
 **Error Handling in Batch Mode:**
 When processing multiple files, the script will:
-1. Continue processing remaining files even if one fails
-2. Track which files succeeded and which failed
-3. Display detailed error messages for each failure
-4. Provide a summary at the end showing success/failure counts
-5. List all failed files with their specific error messages
+1. Validate the template structure before processing any files
+2. Continue processing remaining files even if one fails
+3. Track which files succeeded and which failed
+4. Display detailed error messages for each failure
+5. Provide a summary at the end showing success/failure counts
+6. List all failed files with their specific error messages
+
+**Template Validation:**
+Before processing any files, the script validates that the template has:
+- `[DREDGER_1]` section with a `file_name` entry
+- `[MORPHOLOGY]` section
+- `[OUTPUTS]` section after `[MORPHOLOGY]`
+- `[OUTPUT_1]` section after `[OUTPUTS]` with a `file_name` entry
+
+If validation fails, the script stops immediately with a helpful error message explaining what's missing.
 
 Example output with failures:
 ```
@@ -171,6 +181,35 @@ Failed files:
   - file2.dfs0: Section [MORPHOLOGY] not found
   - file3.dfs0: No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS]
 ```
+
+### Template Structure Requirements
+
+Templates must follow this structure to work correctly:
+
+```
+[DREDGER_1]
+file_name = "placeholder.dfs0|"    # Required: Will be updated with actual .dfs0 path
+# ... other dredger settings ...
+
+[MORPHOLOGY]
+# ... morphology settings ...
+
+[OUTPUTS]
+number_of_outputs = 1
+
+[OUTPUT_1]
+file_name = "placeholder.dfsu"    # Required: Will be updated with output .dfsu path
+# ... other output settings ...
+```
+
+**Key Requirements:**
+- Must have `[DREDGER_1]` section with `file_name` entry
+- Must have `[MORPHOLOGY]` section  
+- Must have `[OUTPUTS]` section after `[MORPHOLOGY]`
+- Must have `[OUTPUT_1]` section after `[OUTPUTS]` with `file_name` entry
+- The `file_name` entries can contain placeholder values - they will be replaced during processing
+
+The script validates these requirements before processing any files and will provide clear error messages if anything is missing.
 
 ### Section-Aware Parsing
 
