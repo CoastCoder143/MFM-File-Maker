@@ -451,6 +451,9 @@ def validate_template(template_path):
         ValueError: If template is missing required sections or file_name entries
         IOError: If template file cannot be read
     """
+    # Pattern for matching file_name entries (used for validation only - simpler than update pattern)
+    FILE_NAME_PATTERN = re.compile(r'^\s*file_name\s*=\s*"[^"]*"')
+    
     try:
         with open(template_path, 'r') as f:
             lines = f.readlines()
@@ -469,10 +472,9 @@ def validate_template(template_path):
         )
     
     # Check for file_name in [DREDGER_1]
-    file_name_pattern = re.compile(r'^\s*file_name\s*=\s*"[^"]*"')
     has_file_name = False
     for i in range(dredger_section['start'], dredger_section['end'] + 1):
-        if file_name_pattern.match(lines[i]):
+        if FILE_NAME_PATTERN.match(lines[i]):
             has_file_name = True
             break
     
@@ -509,11 +511,11 @@ def validate_template(template_path):
             "Please ensure your template has an [OUTPUT_1] section after the [OUTPUTS] section."
         )
     
-    # Check for file_name in [OUTPUT_1]
-    output1_section = min(output1_sections, key=lambda s: s['start'])
+    # Use the first OUTPUT_1 section that appears after OUTPUTS (sorted by start position)
+    output1_section = output1_sections[0] if len(output1_sections) == 1 else min(output1_sections, key=lambda s: s['start'])
     has_file_name = False
     for i in range(output1_section['start'], output1_section['end'] + 1):
-        if file_name_pattern.match(lines[i]):
+        if FILE_NAME_PATTERN.match(lines[i]):
             has_file_name = True
             break
     
