@@ -166,19 +166,106 @@ def prompt_user():
     return dfs0_folder, dfsu_folder, template_path
 
 
-def find_dfs0_file(folder):
-    """Find .dfs0 file in the specified folder."""
+def find_dfs0_file(folder, template_basename=None):
+    """
+    Find .dfs0 file in the specified folder.
+    
+    If template_basename is provided, attempts to match it with a .dfs0 file
+    based on common naming patterns. If multiple files exist, prompts user to select.
+    
+    Args:
+        folder: Path to folder containing .dfs0 files
+        template_basename: Optional basename of template (without extension) to help match
+        
+    Returns:
+        Filename of the selected .dfs0 file (not full path)
+    """
     dfs0_files = [f for f in os.listdir(folder) if f.endswith('.dfs0')]
     
     if len(dfs0_files) == 0:
         print(f"Error: No .dfs0 files found in '{folder}'")
         sys.exit(1)
-    elif len(dfs0_files) > 1:
-        print(f"Error: Multiple .dfs0 files found in '{folder}': {dfs0_files}")
-        print("Ambiguous - cannot determine which file to use")
-        sys.exit(1)
+    elif len(dfs0_files) == 1:
+        return dfs0_files[0]
     
-    return dfs0_files[0]
+    # Multiple files found - try to match with template name if provided
+    if template_basename:
+        # Extract potential matching parts from template name
+        # Remove common prefixes and extract the meaningful part
+        # E.g., "MT2D_202602_SI-CB1_3am" -> look for "SI-CB1_3am" or "SI-CB1" and "3am"
+        
+        # Try to find files that contain parts of the template name
+        template_parts = template_basename.replace('-', '_').split('_')
+        
+        # Filter out common generic parts (dates, numbers, etc.)
+        meaningful_parts = [p for p in template_parts 
+                          if len(p) > 1 and not p.isdigit() and not (len(p) == 6 and p.isdigit())]
+        
+        # Try exact matches first - look for files containing the last N parts of template
+        candidates = []
+        
+        # Strategy 1: Look for files containing the last 2-3 meaningful parts
+        if len(meaningful_parts) >= 2:
+            search_pattern = '_'.join(meaningful_parts[-2:])
+            candidates = [f for f in dfs0_files if search_pattern.lower() in f.lower()]
+        
+        # Strategy 2: If no match, try last meaningful part
+        if not candidates and meaningful_parts:
+            search_pattern = meaningful_parts[-1]
+            candidates = [f for f in dfs0_files if search_pattern.lower() in f.lower()]
+        
+        # Strategy 3: Look for files containing any of the meaningful parts
+        if not candidates and len(meaningful_parts) >= 2:
+            for part in meaningful_parts[-3:]:  # Check last 3 parts
+                if len(part) >= 3:  # Only meaningful parts with 3+ chars
+                    matching = [f for f in dfs0_files if part.lower() in f.lower()]
+                    if len(matching) == 1:
+                        candidates = matching
+                        break
+        
+        if len(candidates) == 1:
+            print(f"Auto-selected .dfs0 file based on template name: {candidates[0]}")
+            return candidates[0]
+        elif len(candidates) > 1:
+            print(f"\nFound {len(candidates)} .dfs0 files matching template pattern:")
+            for i, f in enumerate(sorted(candidates), 1):
+                print(f"  {i}. {f}")
+            print(f"\nAll files in folder ({len(dfs0_files)} total):")
+            for i, f in enumerate(sorted(dfs0_files), 1):
+                print(f"  {i}. {f}")
+        else:
+            # No matches found based on template
+            print(f"\nCould not auto-match template to .dfs0 file.")
+            print(f"Template: {template_basename}")
+            print(f"\nAll .dfs0 files in '{folder}':")
+            for i, f in enumerate(sorted(dfs0_files), 1):
+                print(f"  {i}. {f}")
+    else:
+        # No template provided
+        print(f"\nMultiple .dfs0 files found in '{folder}':")
+        for i, f in enumerate(sorted(dfs0_files), 1):
+            print(f"  {i}. {f}")
+    
+    # Interactive selection
+    while True:
+        try:
+            choice = input("\nEnter the number of the file to use (or 'q' to quit): ").strip()
+            if choice.lower() == 'q':
+                print("Operation cancelled by user")
+                sys.exit(0)
+            
+            idx = int(choice) - 1
+            if 0 <= idx < len(dfs0_files):
+                selected_file = sorted(dfs0_files)[idx]
+                print(f"Selected: {selected_file}")
+                return selected_file
+            else:
+                print(f"Please enter a number between 1 and {len(dfs0_files)}")
+        except ValueError:
+            print("Please enter a valid number or 'q' to quit")
+        except KeyboardInterrupt:
+            print("\nOperation cancelled by user")
+            sys.exit(0)
 
 
 def parse_mfm_sections(lines):
@@ -265,9 +352,12 @@ def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
 
 def edit_mfm_file(dfs0_folder, dfsu_folder, template_path):
     """Edit the .mfm file with the specified changes."""
-    # Find the .dfs0 file
-    dfs0_file = find_dfs0_file(dfs0_folder)
-    print(f"Found .dfs0 file: {dfs0_file}")
+    # Extract template basename for matching
+    template_basename = os.path.splitext(os.path.basename(template_path))[0]
+    
+    # Find the .dfs0 file (with smart matching based on template name)
+    dfs0_file = find_dfs0_file(dfs0_folder, template_basename)
+    print(f"Using .dfs0 file: {dfs0_file}")
     
     # Create output folder if it doesn't exist
     os.makedirs('output', exist_ok=True)
