@@ -163,22 +163,38 @@ def prompt_user():
         list_available_templates()
         sys.exit(1)
     
-    return dfs0_folder, dfsu_folder, template_path
-
-
-def find_dfs0_file(folder, template_basename=None):
-    """
-    Find .dfs0 file in the specified folder.
+    # Ask if user wants batch mode
+    print("\n" + "=" * 50)
+    batch_mode = False
+    while True:
+        choice = input("Process [M]ultiple .dfs0 files or [S]ingle file? (M/S): ").strip().upper()
+        if choice == 'M':
+            batch_mode = True
+            break
+        elif choice == 'S':
+            batch_mode = False
+            break
+        else:
+            print("Please enter 'M' for multiple or 'S' for single")
     
-    If template_basename is provided, attempts to match it with a .dfs0 file
-    based on common naming patterns. If multiple files exist, prompts user to select.
+    return dfs0_folder, dfsu_folder, template_path, batch_mode
+
+
+
+def find_dfs0_files(folder, template_basename=None, batch_mode=False):
+    """
+    Find .dfs0 file(s) in the specified folder.
+    
+    If batch_mode is True, returns all .dfs0 files or lets user select multiple.
+    If batch_mode is False, returns a single file (original behavior).
     
     Args:
         folder: Path to folder containing .dfs0 files
         template_basename: Optional basename of template (without extension) to help match
+        batch_mode: If True, allow selecting/returning multiple files
         
     Returns:
-        Filename of the selected .dfs0 file (not full path)
+        List of filenames of selected .dfs0 files (not full paths)
     """
     # Sort once at the beginning for consistent ordering
     dfs0_files = sorted([f for f in os.listdir(folder) if f.endswith('.dfs0')])
@@ -187,85 +203,134 @@ def find_dfs0_file(folder, template_basename=None):
         print(f"Error: No .dfs0 files found in '{folder}'")
         sys.exit(1)
     elif len(dfs0_files) == 1:
-        return dfs0_files[0]
+        return [dfs0_files[0]]
     
-    # Multiple files found - try to match with template name if provided
-    if template_basename:
-        # Normalize template name for matching (replace delimiters with underscore)
-        normalized_template = template_basename.replace('-', '_').replace(' ', '_')
+    # Multiple files found
+    if batch_mode:
+        # In batch mode, ask user if they want all files or specific files
+        print(f"\nFound {len(dfs0_files)} .dfs0 files in '{folder}'")
         
-        # Extract potential matching parts from template name
-        # E.g., "MT2D_202602_SI_CB1_3am" -> look for "SI_CB1_3am" or "CB1_3am"
-        template_parts = normalized_template.split('_')
-        
-        # Filter out common generic parts (pure numbers and 6-digit dates like 202602)
-        meaningful_parts = [p for p in template_parts 
-                          if len(p) > 1 and not p.isdigit()]
-        
-        # Try exact matches first - look for files containing the last N parts of template
-        candidates = []
-        
-        # Strategy 1: Look for files containing the last 2 meaningful parts
-        if len(meaningful_parts) >= 2:
-            search_pattern = '_'.join(meaningful_parts[-2:])
-            # Normalize filenames for comparison
-            candidates = [f for f in dfs0_files 
-                         if search_pattern.lower() in f.replace('-', '_').lower()]
-        
-        # Strategy 2: If no match, try last meaningful part
-        if not candidates and meaningful_parts:
-            search_pattern = meaningful_parts[-1]
-            candidates = [f for f in dfs0_files 
-                         if search_pattern.lower() in f.replace('-', '_').lower()]
-        
-        # Strategy 3: Look for files containing any of the last few meaningful parts
-        if not candidates and len(meaningful_parts) >= 2:
-            for part in meaningful_parts[-3:]:  # Check last 3 parts
-                if len(part) >= 3:  # Only meaningful parts with 3+ chars
-                    matching = [f for f in dfs0_files 
-                              if part.lower() in f.replace('-', '_').lower()]
-                    if len(matching) == 1:
-                        candidates = matching
-                        break
-        
-        if len(candidates) == 1:
-            print(f"Auto-selected .dfs0 file based on template name: {candidates[0]}")
-            return candidates[0]
-        elif len(candidates) > 1:
-            print(f"\nFound {len(candidates)} .dfs0 files matching template pattern:")
-            for i, f in enumerate(candidates, 1):
-                print(f"  {i}. {f}")
-            print(f"\nNote: All {len(dfs0_files)} files in folder are shown below for reference.")
-        else:
-            # No matches found based on template
-            print(f"\nCould not auto-match template to .dfs0 file.")
-            print(f"Template: {template_basename}")
-    
-    # Show all files for selection
-    print(f"\nAll .dfs0 files in '{folder}':")
-    for i, f in enumerate(dfs0_files, 1):
-        print(f"  {i}. {f}")
-    
-    # Interactive selection
-    while True:
-        try:
-            choice = input("\nEnter the number of the file to use (or 'q' to quit): ").strip()
-            if choice.lower() == 'q':
+        while True:
+            choice = input("\nProcess [A]ll files, [S]elect specific files, or [Q]uit? ").strip().upper()
+            if choice == 'Q':
                 print("Operation cancelled by user")
                 sys.exit(0)
-            
-            idx = int(choice) - 1
-            if 0 <= idx < len(dfs0_files):
-                selected_file = dfs0_files[idx]
-                print(f"Selected: {selected_file}")
-                return selected_file
+            elif choice == 'A':
+                print(f"Selected all {len(dfs0_files)} files for processing")
+                return dfs0_files
+            elif choice == 'S':
+                break
             else:
-                print(f"Please enter a number between 1 and {len(dfs0_files)}")
-        except ValueError:
-            print("Please enter a valid number or 'q' to quit")
-        except KeyboardInterrupt:
-            print("\nOperation cancelled by user")
-            sys.exit(0)
+                print("Please enter 'A' for all, 'S' for select, or 'Q' to quit")
+        
+        # Show all files for selection
+        print(f"\nAll .dfs0 files in '{folder}':")
+        for i, f in enumerate(dfs0_files, 1):
+            print(f"  {i}. {f}")
+        
+        # Get user selection
+        while True:
+            try:
+                selection = input("\nEnter file numbers separated by commas (e.g., 1,3,5) or 'all': ").strip()
+                if selection.lower() == 'all':
+                    return dfs0_files
+                
+                # Parse comma-separated numbers
+                indices = [int(x.strip()) - 1 for x in selection.split(',')]
+                
+                # Validate indices
+                invalid = [i for i in indices if i < 0 or i >= len(dfs0_files)]
+                if invalid:
+                    print(f"Invalid file number(s). Please enter numbers between 1 and {len(dfs0_files)}")
+                    continue
+                
+                selected_files = [dfs0_files[i] for i in indices]
+                print(f"Selected {len(selected_files)} file(s): {', '.join(selected_files)}")
+                return selected_files
+                
+            except ValueError:
+                print("Please enter valid numbers separated by commas")
+            except KeyboardInterrupt:
+                print("\nOperation cancelled by user")
+                sys.exit(0)
+    else:
+        # Original single-file behavior with smart matching
+        if template_basename:
+            # Normalize template name for matching (replace delimiters with underscore)
+            normalized_template = template_basename.replace('-', '_').replace(' ', '_')
+            
+            # Extract potential matching parts from template name
+            # E.g., "MT2D_202602_SI_CB1_3am" -> look for "SI_CB1_3am" or "CB1_3am"
+            template_parts = normalized_template.split('_')
+            
+            # Filter out common generic parts (pure numbers and 6-digit dates like 202602)
+            meaningful_parts = [p for p in template_parts 
+                              if len(p) > 1 and not p.isdigit()]
+            
+            # Try exact matches first - look for files containing the last N parts of template
+            candidates = []
+            
+            # Strategy 1: Look for files containing the last 2 meaningful parts
+            if len(meaningful_parts) >= 2:
+                search_pattern = '_'.join(meaningful_parts[-2:])
+                # Normalize filenames for comparison
+                candidates = [f for f in dfs0_files 
+                             if search_pattern.lower() in f.replace('-', '_').lower()]
+            
+            # Strategy 2: If no match, try last meaningful part
+            if not candidates and meaningful_parts:
+                search_pattern = meaningful_parts[-1]
+                candidates = [f for f in dfs0_files 
+                             if search_pattern.lower() in f.replace('-', '_').lower()]
+            
+            # Strategy 3: Look for files containing any of the last few meaningful parts
+            if not candidates and len(meaningful_parts) >= 2:
+                for part in meaningful_parts[-3:]:  # Check last 3 parts
+                    if len(part) >= 3:  # Only meaningful parts with 3+ chars
+                        matching = [f for f in dfs0_files 
+                                  if part.lower() in f.replace('-', '_').lower()]
+                        if len(matching) == 1:
+                            candidates = matching
+                            break
+            
+            if len(candidates) == 1:
+                print(f"Auto-selected .dfs0 file based on template name: {candidates[0]}")
+                return [candidates[0]]
+            elif len(candidates) > 1:
+                print(f"\nFound {len(candidates)} .dfs0 files matching template pattern:")
+                for i, f in enumerate(candidates, 1):
+                    print(f"  {i}. {f}")
+                print(f"\nNote: All {len(dfs0_files)} files in folder are shown below for reference.")
+            else:
+                # No matches found based on template
+                print(f"\nCould not auto-match template to .dfs0 file.")
+                print(f"Template: {template_basename}")
+        
+        # Show all files for selection
+        print(f"\nAll .dfs0 files in '{folder}':")
+        for i, f in enumerate(dfs0_files, 1):
+            print(f"  {i}. {f}")
+        
+        # Interactive selection for single file
+        while True:
+            try:
+                choice = input("\nEnter the number of the file to use (or 'q' to quit): ").strip()
+                if choice.lower() == 'q':
+                    print("Operation cancelled by user")
+                    sys.exit(0)
+                
+                idx = int(choice) - 1
+                if 0 <= idx < len(dfs0_files):
+                    selected_file = dfs0_files[idx]
+                    print(f"Selected: {selected_file}")
+                    return [selected_file]
+                else:
+                    print(f"Please enter a number between 1 and {len(dfs0_files)}")
+            except ValueError:
+                print("Please enter a valid number or 'q' to quit")
+            except KeyboardInterrupt:
+                print("\nOperation cancelled by user")
+                sys.exit(0)
 
 
 def parse_mfm_sections(lines):
@@ -350,23 +415,32 @@ def update_file_name_in_section(lines, section, new_value, preserve_pipe=False):
         sys.exit(1)
 
 
-def edit_mfm_file(dfs0_folder, dfsu_folder, template_path):
-    """Edit the .mfm file with the specified changes."""
-    # Extract template basename for matching
-    template_basename = os.path.splitext(os.path.basename(template_path))[0]
+def process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path):
+    """
+    Process a single .dfs0 file with the template.
     
-    # Find the .dfs0 file (with smart matching based on template name)
-    dfs0_file = find_dfs0_file(dfs0_folder, template_basename)
-    print(f"Using .dfs0 file: {dfs0_file}")
-    
+    Args:
+        dfs0_file: Filename of the .dfs0 file (not full path)
+        dfs0_folder: Folder containing the .dfs0 file
+        dfsu_folder: Folder for output .dfsu files
+        template_path: Path to the template .mfm file
+        
+    Returns:
+        Path to the created output .mfm file
+    """
     # Create output folder if it doesn't exist
     os.makedirs('output', exist_ok=True)
     
-    # Copy template to output folder
-    template_basename = os.path.basename(template_path)
-    output_path = os.path.join('output', template_basename)
+    # Generate output filename: include dfs0 basename for uniqueness
+    template_basename = os.path.splitext(os.path.basename(template_path))[0]
+    dfs0_basename = os.path.splitext(dfs0_file)[0]
+    
+    # Output filename: template_basename_dfs0_basename.mfm
+    output_filename = f"{template_basename}_{dfs0_basename}.mfm"
+    output_path = os.path.join('output', output_filename)
+    
+    # Copy template to output folder with new name
     shutil.copy2(template_path, output_path)
-    print(f"Copied template to: {output_path}")
     
     # Read the .mfm file from output folder
     with open(output_path, 'r') as f:
@@ -378,50 +452,95 @@ def edit_mfm_file(dfs0_folder, dfsu_folder, template_path):
     # A) Update [DREDGER_1] section
     dredger_section = find_section_by_name(sections, '[DREDGER_1]')
     if dredger_section is None:
-        print("Error: [DREDGER_1] section not found")
-        sys.exit(1)
-    
-    dfs0_path = os.path.join(dfs0_folder, dfs0_file)
-    update_file_name_in_section(lines, dredger_section, dfs0_path, preserve_pipe=True)
-    print(f"Updated [DREDGER_1] file_name to: {dfs0_path}|")
+        print(f"Warning: [DREDGER_1] section not found in {output_filename}")
+    else:
+        dfs0_path = os.path.join(dfs0_folder, dfs0_file)
+        update_file_name_in_section(lines, dredger_section, dfs0_path, preserve_pipe=True)
     
     # B) Update [MORPHOLOGY] -> [OUTPUTS] -> [OUTPUT_1]
-    # First find [OUTPUTS] after [MORPHOLOGY]
-    outputs_section = find_first_section_after(sections, '[MORPHOLOGY]', '[OUTPUTS]')
-    
-    # Re-parse sections within the OUTPUTS section to find [OUTPUT_1]
-    # We need to look for sections starting after outputs_section.start
-    output1_sections = [s for s in sections 
-                        if s['name'] == '[OUTPUT_1]' and s['start'] > outputs_section['start']]
-    
-    if len(output1_sections) == 0:
-        print("Error: No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS]")
-        sys.exit(1)
-    
-    # Find the first OUTPUT_1 that is within or right after the OUTPUTS section
-    # This is the one that belongs to MORPHOLOGY
-    output1_section = min(output1_sections, key=lambda s: s['start'])
-    
-    # Generate output file name: <output_folder>/<mfm_basename>.dfsu
-    mfm_basename = os.path.splitext(os.path.basename(output_path))[0]
-    dfsu_filename = f"{mfm_basename}.dfsu"
-    dfsu_path = os.path.join(dfsu_folder, dfsu_filename)
-    
-    update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
-    print(f"Updated [OUTPUT_1] file_name to: {dfsu_path}")
+    try:
+        # First find [OUTPUTS] after [MORPHOLOGY]
+        outputs_section = find_first_section_after(sections, '[MORPHOLOGY]', '[OUTPUTS]')
+        
+        # Re-parse sections within the OUTPUTS section to find [OUTPUT_1]
+        output1_sections = [s for s in sections 
+                            if s['name'] == '[OUTPUT_1]' and s['start'] > outputs_section['start']]
+        
+        if len(output1_sections) == 0:
+            print(f"Warning: No [OUTPUT_1] section found after [MORPHOLOGY] -> [OUTPUTS] in {output_filename}")
+        else:
+            # Find the first OUTPUT_1 that is within or right after the OUTPUTS section
+            output1_section = min(output1_sections, key=lambda s: s['start'])
+            
+            # Generate output dfsu file name: based on output mfm filename
+            mfm_basename = os.path.splitext(output_filename)[0]
+            dfsu_filename = f"{mfm_basename}.dfsu"
+            dfsu_path = os.path.join(dfsu_folder, dfsu_filename)
+            
+            update_file_name_in_section(lines, output1_section, dfsu_path, preserve_pipe=False)
+    except Exception as e:
+        print(f"Warning: Could not update [OUTPUT_1] in {output_filename}: {e}")
     
     # Write back to file in output folder
     with open(output_path, 'w') as f:
         f.writelines(lines)
     
-    print(f"\nSuccessfully created and updated {output_path}")
+    return output_path
+
+
+def edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode=False):
+    """
+    Edit the .mfm file with the specified changes.
+    
+    Args:
+        dfs0_folder: Folder containing .dfs0 files
+        dfsu_folder: Folder for output .dfsu files
+        template_path: Path to template .mfm file
+        batch_mode: If True, process multiple files
+    """
+    # Extract template basename for matching
+    template_basename = os.path.splitext(os.path.basename(template_path))[0]
+    
+    # Find the .dfs0 file(s)
+    dfs0_files = find_dfs0_files(dfs0_folder, template_basename, batch_mode=batch_mode)
+    
+    if len(dfs0_files) == 1:
+        # Single file processing
+        dfs0_file = dfs0_files[0]
+        print(f"\nProcessing: {dfs0_file}")
+        output_path = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
+        print(f"✓ Created: {output_path}")
+        print(f"\nSuccessfully processed 1 file")
+    else:
+        # Batch processing multiple files
+        print(f"\nProcessing {len(dfs0_files)} files...")
+        print("=" * 60)
+        
+        successful = 0
+        failed = 0
+        
+        for i, dfs0_file in enumerate(dfs0_files, 1):
+            try:
+                print(f"\n[{i}/{len(dfs0_files)}] Processing: {dfs0_file}")
+                output_path = process_single_dfs0(dfs0_file, dfs0_folder, dfsu_folder, template_path)
+                print(f"    ✓ Created: {os.path.basename(output_path)}")
+                successful += 1
+            except Exception as e:
+                print(f"    ✗ Failed: {e}")
+                failed += 1
+        
+        print("\n" + "=" * 60)
+        print(f"Processing complete: {successful} successful, {failed} failed")
+        
+        if failed > 0:
+            print(f"Warning: {failed} file(s) failed to process")
 
 
 def main():
     """Main entry point."""
     try:
-        dfs0_folder, dfsu_folder, template_path = prompt_user()
-        edit_mfm_file(dfs0_folder, dfsu_folder, template_path)
+        dfs0_folder, dfsu_folder, template_path, batch_mode = prompt_user()
+        edit_mfm_file(dfs0_folder, dfsu_folder, template_path, batch_mode)
     except KeyboardInterrupt:
         print("\nOperation cancelled by user")
         sys.exit(1)
