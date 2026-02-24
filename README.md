@@ -26,7 +26,8 @@ MFM-File-Maker/
 ## Requirements
 
 - Python 3.6 or higher
-- No external dependencies (uses only standard library)
+- No external dependencies required for basic operation
+- Optional: `mikeio` for PFS format support (see [MIKEIO Integration](MIKEIO_INTEGRATION.md))
 
 ## Usage
 
@@ -287,6 +288,23 @@ To create a new template:
    - `file_name = "placeholder.dfsu"` for OUTPUT_1
 
 The script will replace these placeholders with actual paths when generating output files.
+
+## MIKEIO Integration
+
+This tool uses a lightweight regex-based approach for editing .mfm files, which works well for the simplified format used in templates.
+
+For users who need proper PFS format files or integration with MIKE tools:
+- 📖 Read [MIKEIO Research](MIKEIO_RESEARCH.md) for detailed information about MIKEIO
+- 🔄 Read [MIKEIO Integration Guide](MIKEIO_INTEGRATION.md) for migration instructions
+- 🛠️ Use `convert_to_pfs.py` to convert templates to PFS format
+
+```bash
+# Optional: Install MIKEIO
+pip install -r requirements.txt
+
+# Convert template to PFS format
+python convert_to_pfs.py input-mfm/template.mfm input-mfm/template_pfs.mfm
+```
 
 ## License
 
