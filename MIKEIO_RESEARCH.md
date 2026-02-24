@@ -348,16 +348,61 @@ Beyond .mfm files, MIKEIO can:
    point_data = dfsu.extract(x=12.5, y=55.5)
    ```
 
+## Important Note About File Formats
+
+This repository's template files use a **simplified INI-style format** for .mfm files:
+```
+[SECTION_NAME]
+parameter = value
+```
+
+However, proper MIKE .mfm files (PFS format) require `EndSect` markers:
+```
+[SECTION_NAME]
+   parameter = value
+EndSect  // SECTION_NAME
+```
+
+**MIKEIO can only read/write proper PFS format files with EndSect markers.**
+
+### Current Implementation
+
+The `edit_mfm.py` script uses regex-based text manipulation which works perfectly for the simplified format. This approach:
+- ✅ Works with both simple and PFS formats
+- ✅ No external dependencies required
+- ✅ Fast and lightweight
+- ✅ Preserves exact formatting
+- ❌ Limited validation
+- ❌ Manual string manipulation
+
+### Migration to MIKEIO
+
+If you want to use MIKEIO:
+1. Convert templates using `convert_to_pfs.py`:
+   ```bash
+   python convert_to_pfs.py input-mfm/template.mfm input-mfm/template_pfs.mfm
+   ```
+
+2. Then use MIKEIO's PfsDocument:
+   ```python
+   from mikeio import PfsDocument
+   
+   pfs = PfsDocument('template_pfs.mfm')
+   pfs.DREDGER_1.file_name = 'new_file.dfs0|'
+   pfs.write('output.mfm')
+   ```
+
 ## Conclusion
 
-MIKEIO is a powerful library for working with MIKE files, including .mfm files (which are PFS files). While the current `edit_mfm.py` script provides a lightweight solution for specific path updates, MIKEIO offers:
+**Current Status**: This repository uses regex-based manipulation for simplified .mfm files, which works well and has no dependencies.
 
-- Structural understanding of .mfm files
-- Robust handling of complex configurations
-- Integration with the broader MIKE ecosystem
-- Official DHI support and ongoing development
+**MIKEIO Benefits**: Structural understanding, robust handling, MIKE ecosystem integration, official DHI support.
 
-For users working extensively with MIKE models, learning MIKEIO is valuable. For simple .mfm path updates, the current script remains practical and efficient.
+**Recommendation**:
+- **Keep current approach** for simplicity and lightweight operation
+- **Migrate to MIKEIO** only if you need proper PFS format files for MIKE tools
+
+For users working extensively with MIKE models and need proper PFS files, MIKEIO is the recommended approach. For simple path updates in simplified .mfm files, the current script remains practical and efficient.
 
 ## References
 
