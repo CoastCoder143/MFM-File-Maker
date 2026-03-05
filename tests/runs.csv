@@ -1,0 +1,5 @@
+run_name,weights_fraction,dredger_file_name,output_file_name
+Run 01,40 40 20 0 0 0,dredger_a.dfsu,output_a.dfsu
+Run 02,"40.0,40.0,20.0,0,0,0",|dredger_b.dfsu|,|output_b.dfsu|
+MT2D_202603_SI-CB4_2pm,"40.0,40.0,20.0,0,0,0",\\sg-ncr10\Projects\61803666 Sudong EMMP\Forecast\Input\02_MT Sources\202603-W1W2\53_SI-CB4_2pm.dfs0,\\sg-ncr10\Projects\61803666 Sudong EMMP\Forecast\Output\02_MT\202603-W1W2\SI-CB4_2pm_2D.dfsu
+MT2D_202603_SI-CB4_4pm,"40.0,40.0,20.0,0,0,0",\\sg-ncr10\Projects\61803666 Sudong EMMP\Forecast\Input\02_MT Sources\202603-W1W2\53_SI-CB4_4pm.dfs0,\\sg-ncr10\Projects\61803666 Sudong EMMP\Forecast\Output\02_MT\202603-W1W2\SI-CB4_4pm_2D.dfsu

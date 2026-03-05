@@ -1,12 +1,23 @@
-# Generated .mfm files
-output/
-
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
+*.py[cod]
+*$py.class
+*.so
 .Python
+.venv/
+venv/
+ENV/
+env/
+
+# uv
+.uv/
+uv.lock
+
+# Output
+generated/
+output/
+*.mfm
+!tests/*.mfm
 
 # IDE
 .vscode/
@@ -18,3 +29,10 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+desktop.ini
+
+# Project specific
+runs.csv
+!tests/runs.csv
+model_template.mfm
+!tests/MT2D_202603_SI-CB4_12pm.mfm
