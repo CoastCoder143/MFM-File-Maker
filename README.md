@@ -28,7 +28,7 @@ Generate run-specific model files from a template and a CSV of run parameters.
 4) Run:
 
 ```bash
-python make_runs.py
+uv run make_runs.py
 ```
 
 ## Generate CSV templates quickly
