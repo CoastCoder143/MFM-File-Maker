@@ -17,18 +17,37 @@ Generate run-specific model files from a template and a CSV of run parameters.
 - `make_runs.py` (script)
 - `model_template.mfm` (template file; you provide this)
 - `runs.csv` (input rows; you provide this)
+- `runs_template_singledredger.csv` (example CSV for single dredger runs)
 - `runs_template_multidredger.csv` (example CSV with multiple dredgers)
 - `generated/` (output folder; created automatically)
 
 ## Quick start
 1) Put your template file at `model_template.mfm` in this folder.
-2) Create a `runs.csv` in this folder using the format below.
+2) Create `runs.csv` in this folder (copy one of the templates below).
 3) Open `make_runs.py` and set `DRY_RUN = False` when ready.
 4) Run:
 
 ```bash
 python make_runs.py
 ```
+
+## Generate CSV templates quickly
+
+Use one of these PowerShell commands from the project root:
+
+Single dredger:
+
+```powershell
+Copy-Item .\runs_template_singledredger.csv .\runs.csv -Force
+```
+
+Multiple dredgers:
+
+```powershell
+Copy-Item .\runs_template_multidredger.csv .\runs.csv -Force
+```
+
+Then edit `runs.csv` with your actual file paths and run names.
 
 ## CSV format
 
@@ -84,6 +103,7 @@ Notes:
 - `weights_fraction` (and per-dredger overrides) can be space- or comma-separated; values are normalized to one decimal place.
 - `dredger_*_file_name` and `output_file_name` are wrapped as `|path|` if not already.
 - `run_name` is sanitized into a safe filename (spaces become `_`).
+- See `runs_template_singledredger.csv` for a ready-to-use single-dredger template.
 - See `runs_template_multidredger.csv` for a complete example with 1-5 dredgers.
 
 ## Template expectations
