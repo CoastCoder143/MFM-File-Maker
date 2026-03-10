@@ -8,7 +8,7 @@ TEMPLATE_FILE = Path(r"./model_template.mfm")   # your .mfm template file
 RUNS_CSV      = Path(r"./runs.csv")             # list of runs
 OUTPUT_DIR    = Path(r"./generated")            # where new copies go
 
-DRY_RUN       = True                             # set False to actually write
+DRY_RUN       = False                             # set False to actually write
 # ------------------------------------------------
 
 # Compile regex once
