@@ -17,6 +17,7 @@ Generate run-specific model files from a template and a CSV of run parameters.
 - `make_runs.py` (script)
 - `model_template.mfm` (template file; you provide this)
 - `runs.csv` (input rows; you provide this)
+- `runs_template_multidredger.csv` (example CSV with multiple dredgers)
 - `generated/` (output folder; created automatically)
 
 ## Quick start
@@ -83,6 +84,7 @@ Notes:
 - `weights_fraction` (and per-dredger overrides) can be space- or comma-separated; values are normalized to one decimal place.
 - `dredger_*_file_name` and `output_file_name` are wrapped as `|path|` if not already.
 - `run_name` is sanitized into a safe filename (spaces become `_`).
+- See `runs_template_multidredger.csv` for a complete example with 1-5 dredgers.
 
 ## Template expectations
 The template must contain a `[DREDGER_1]` section with `weights_fraction` and
@@ -107,6 +109,11 @@ When the CSV specifies more than one dredger, the script clones the
 `[DREDGER_1]` block to create `[DREDGER_2]`, `[DREDGER_3]`, … sections and
 updates `number_of_dredgers` / `MzSEPfsListItemCount` automatically.
 **The original template file is never modified.**
+
+**Important:** If your template already contains multiple `[DREDGER_N]` sections (N ≥ 2),
+the script will remove them and regenerate clean sections based on your CSV.
+Each cloned dredger will have its `name` field updated appropriately
+(e.g., 'Dredger 2', 'Dredger 3').
 
 If a key is not found within the section, a warning is printed.
 

@@ -106,14 +106,52 @@ def extract_section_block(text: str, section_name: str) -> str:
 def patch_dredger_block(block: str, dredger_num: int, file_name: str, weights: str) -> str:
     """
     Given a DREDGER_1 text block, rename it to DREDGER_N and patch
-    weights_fraction and file_name with the supplied values.
+    weights_fraction, file_name, and name with the supplied values.
     """
     new_n = str(dredger_num)
     block = block.replace("[DREDGER_1]", f"[DREDGER_{new_n}]")
     block = block.replace("EndSect  // DREDGER_1", f"EndSect  // DREDGER_{new_n}")
+    
+    # Update the 'name' field to reflect the dredger number
+    block = re.sub(
+        r"(\s*)name\s*=\s*'Dredger\s+\d+'",
+        f"\\1name = 'Dredger {new_n}'",
+        block
+    )
+    
     block, _ = patch_key_within_section(block, f"DREDGER_{new_n}", re_weights, weights)
     block, _ = patch_key_within_section(block, f"DREDGER_{new_n}", re_fname, file_name)
     return block
+
+def remove_existing_dredgers_except_1(text: str) -> str:
+    """
+    Removes all [DREDGER_N] sections (N >= 2) from the template text,
+    leaving only [DREDGER_1] intact. This prevents duplication when
+    the template already has multiple dredger sections.
+    """
+    lines = text.splitlines(True)
+    out = []
+    skip = False
+    dredger_pattern = re.compile(r"\[DREDGER_(\d+)\]")
+    
+    for line in lines:
+        # Check if this is the start of a DREDGER_N section where N > 1
+        m = dredger_pattern.search(line)
+        if m:
+            n = int(m.group(1))
+            if n > 1:
+                skip = True
+                continue
+        
+        # Check if we're at the end of a DREDGER_N section where N > 1
+        if skip:
+            if "EndSect  // DREDGER_" in line:
+                skip = False
+            continue
+        
+        out.append(line)
+    
+    return "".join(out)
 
 def insert_extra_dredgers(text: str, extra_entries: list[tuple[str, str]]) -> str:
     """
@@ -185,6 +223,9 @@ def patch_dredger_and_output(
     """
     counts: dict[str, int] = {}
     num_dredgers = len(dredger_entries)
+
+    # Remove any existing DREDGER_2+ sections from the template to prevent duplication
+    text = remove_existing_dredgers_except_1(text)
 
     # Patch DREDGER_1 with the first entry
     fname_1, weights_1 = dredger_entries[0]
