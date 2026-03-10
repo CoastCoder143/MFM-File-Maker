@@ -8,12 +8,15 @@ TEMPLATE_FILE = Path(r"./model_template.mfm")   # your .mfm template file
 RUNS_CSV      = Path(r"./runs.csv")             # list of runs
 OUTPUT_DIR    = Path(r"./generated")            # where new copies go
 
-DRY_RUN       = False                            # set False to actually write
+DRY_RUN       = False                             # set False to actually write
 # ------------------------------------------------
 
 # Compile regex once
 re_weights = re.compile(r"^(?P<indent>\s*)weights_fraction\s*=\s*(?P<rhs>.*)\s*$")
 re_fname   = re.compile(r"^(?P<indent>\s*)file_name\s*=\s*(?P<rhs>.*)\s*$")
+re_dredge_count = re.compile(
+    r"^(?P<indent>\s*)(?P<key>number_of_dredgers|MzSEPfsListItemCount)\s*=\s*(?P<rhs>.*)\s*$"
+)
 
 def normalize_weights(s: str) -> str:
     """
@@ -77,28 +80,169 @@ def patch_key_within_section(text: str, section_name: str, key_regex: re.Pattern
 
     return "".join(out), replaced
 
-def patch_dredger_and_output(text: str, weights: str, dredger_file: str, output_file: str) -> tuple[str, dict]:
+def extract_section_block(text: str, section_name: str) -> str:
     """
-    Patches:
-      - DREDGER_1: weights_fraction, file_name
-      - OUTPUT_1 : file_name
-    Returns patched text and a dict of replacement counts.
-    """
-    counts = {}
+    Extracts the full text block of a section (including start/end markers):
+      [SECTION_NAME]
+      ...
+      EndSect  // SECTION_NAME
 
-    # DREDGER_1 weights_fraction
-    text, c = patch_key_within_section(text, "DREDGER_1", re_weights, weights)
+    Returns the block as a string, or an empty string if not found.
+    """
+    section_start = f"[{section_name}]"
+    section_end   = f"EndSect  // {section_name}"
+    lines = text.splitlines(True)
+    block: list[str] = []
+    in_section = False
+    for line in lines:
+        if not in_section and section_start in line:
+            in_section = True
+        if in_section:
+            block.append(line)
+        if in_section and section_end in line:
+            break
+    return "".join(block)
+
+def patch_dredger_block(block: str, dredger_num: int, file_name: str, weights: str) -> str:
+    """
+    Given a DREDGER_1 text block, rename it to DREDGER_N and patch
+    weights_fraction and file_name with the supplied values.
+    """
+    new_n = str(dredger_num)
+    block = block.replace("[DREDGER_1]", f"[DREDGER_{new_n}]")
+    block = block.replace("EndSect  // DREDGER_1", f"EndSect  // DREDGER_{new_n}")
+    block, _ = patch_key_within_section(block, f"DREDGER_{new_n}", re_weights, weights)
+    block, _ = patch_key_within_section(block, f"DREDGER_{new_n}", re_fname, file_name)
+    return block
+
+def insert_extra_dredgers(text: str, extra_entries: list[tuple[str, str]]) -> str:
+    """
+    Inserts DREDGER_2, DREDGER_3, … blocks immediately after
+    'EndSect  // DREDGER_1' in *text*.
+
+    extra_entries: list of (file_name, weights) tuples for dredgers 2, 3, …
+    """
+    if not extra_entries:
+        return text
+
+    dredger_1_block = extract_section_block(text, "DREDGER_1")
+    if not dredger_1_block:
+        raise ValueError("Could not find [DREDGER_1] section in template.")
+
+    extra_blocks = []
+    for i, (fname, weights) in enumerate(extra_entries, start=2):
+        extra_blocks.append(patch_dredger_block(dredger_1_block, i, fname, weights))
+
+    insertion = "\n" + "".join(extra_blocks)
+    end_marker = "EndSect  // DREDGER_1"
+    idx = text.find(end_marker)
+    if idx == -1:
+        raise ValueError("Could not find 'EndSect  // DREDGER_1' in template.")
+    after_marker = idx + len(end_marker)
+    newline_idx = text.find("\n", after_marker)
+    if newline_idx == -1:
+        newline_idx = len(text)
+    return text[: newline_idx + 1] + insertion + text[newline_idx + 1 :]
+
+def patch_dredging_counts(text: str, num_dredgers: int) -> str:
+    """
+    Updates number_of_dredgers and MzSEPfsListItemCount inside [DREDGING].
+    """
+    lines = text.splitlines(True)
+    out = []
+    in_dredging = False
+    for line in lines:
+        if "[DREDGING]" in line and not in_dredging:
+            in_dredging = True
+            out.append(line)
+            continue
+        if in_dredging:
+            if "EndSect  // DREDGING" in line:
+                in_dredging = False
+                out.append(line)
+                continue
+            m = re_dredge_count.match(line)
+            if m:
+                out.append(f"{m.group('indent')}{m.group('key')} = {num_dredgers}\n")
+                continue
+        out.append(line)
+    return "".join(out)
+
+def patch_dredger_and_output(
+    text: str,
+    dredger_entries: list[tuple[str, str]],
+    output_file: str,
+) -> tuple[str, dict]:
+    """
+    Patches all dredger sections and the OUTPUT_1 file_name.
+
+    dredger_entries: list of (file_name, weights) tuples, one per dredger.
+      - The first entry patches the existing DREDGER_1 section.
+      - Additional entries are inserted as DREDGER_2, DREDGER_3, … by cloning
+        the DREDGER_1 block from the template; the template itself is never
+        modified.
+    Returns: (patched_text, counts_dict)
+    """
+    counts: dict[str, int] = {}
+    num_dredgers = len(dredger_entries)
+
+    # Patch DREDGER_1 with the first entry
+    fname_1, weights_1 = dredger_entries[0]
+    text, c = patch_key_within_section(text, "DREDGER_1", re_weights, weights_1)
     counts["DREDGER_1.weights_fraction"] = c
-
-    # DREDGER_1 file_name
-    text, c = patch_key_within_section(text, "DREDGER_1", re_fname, dredger_file)
+    text, c = patch_key_within_section(text, "DREDGER_1", re_fname, fname_1)
     counts["DREDGER_1.file_name"] = c
 
-    # OUTPUT_1 file_name (this is the one you asked for)
+    # Insert DREDGER_2 … DREDGER_N (cloned from DREDGER_1; template unchanged)
+    if num_dredgers > 1:
+        text = insert_extra_dredgers(text, dredger_entries[1:])
+        for i in range(2, num_dredgers + 1):
+            counts[f"DREDGER_{i}.file_name"] = 1
+
+    # Keep DREDGING header counts in sync
+    text = patch_dredging_counts(text, num_dredgers)
+    counts["DREDGING.number_of_dredgers"] = num_dredgers
+
+    # OUTPUT_1 file_name
     text, c = patch_key_within_section(text, "OUTPUT_1", re_fname, output_file)
     counts["OUTPUT_1.file_name"] = c
 
     return text, counts
+
+def get_dredger_columns(fieldnames: list[str]) -> list[tuple[str, str | None]]:
+    """
+    Detects dredger columns from the CSV header and returns an ordered list of
+    (file_col, weights_col_or_None) tuples.
+
+    Supported formats:
+      Legacy (single dredger):
+        dredger_file_name                          → 1 dredger, global weights_fraction
+      Numbered (dynamic):
+        dredger_1_file_name [, dredger_1_weights]
+        dredger_2_file_name [, dredger_2_weights]
+        …                                          → N dredgers; per-dredger weights
+                                                     optional (falls back to weights_fraction)
+    """
+    has_numbered = any(re.match(r"dredger_\d+_file_name", f) for f in fieldnames)
+
+    if not has_numbered:
+        if "dredger_file_name" not in fieldnames:
+            raise ValueError(
+                "CSV must have either 'dredger_file_name' or numbered columns "
+                "'dredger_1_file_name' [, 'dredger_2_file_name', …]."
+            )
+        return [("dredger_file_name", None)]
+
+    numbered: list[tuple[int, str, str | None]] = []
+    for f in fieldnames:
+        m = re.match(r"dredger_(\d+)_file_name", f)
+        if m:
+            n = int(m.group(1))
+            wt_col = f"dredger_{n}_weights"
+            numbered.append((n, f, wt_col if wt_col in fieldnames else None))
+
+    numbered.sort(key=lambda x: x[0])
+    return [(col, wt_col) for _, col, wt_col in numbered]
 
 def main():
     if not TEMPLATE_FILE.exists():
@@ -108,27 +252,36 @@ def main():
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     # .mfm is treated as a plain text file (same as editing in Notepad)
-    template_text = TEMPLATE_FILE.read_text(encoding="utf-8")
 
     with RUNS_CSV.open("r", newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
 
-        required = {"run_name", "weights_fraction", "dredger_file_name", "output_file_name"}
+        required = {"run_name", "weights_fraction", "output_file_name"}
         if not required.issubset(reader.fieldnames or set()):
             raise ValueError(f"CSV must have columns: {required}. Found: {reader.fieldnames}")
 
+        dredger_cols = get_dredger_columns(reader.fieldnames or [])
+
         count = 0
         for row in reader:
-            run_name = safe_filename(row["run_name"])
-            weights  = normalize_weights(row["weights_fraction"])
-            dredger_file = normalize_pipe_path(row["dredger_file_name"])
-            output_file  = normalize_pipe_path(row["output_file_name"])
+            run_name    = safe_filename(row["run_name"])
+            global_weights = normalize_weights(row["weights_fraction"])
+            output_file = normalize_pipe_path(row["output_file_name"])
+
+            # Build per-dredger (file_name, weights) list
+            dredger_entries: list[tuple[str, str]] = []
+            for file_col, wt_col in dredger_cols:
+                fname   = normalize_pipe_path(row[file_col])
+                raw_wt  = row[wt_col].strip() if wt_col else ""
+                weights = normalize_weights(raw_wt) if raw_wt else global_weights
+                dredger_entries.append((fname, weights))
 
             out_file = OUTPUT_DIR / f"{run_name}{TEMPLATE_FILE.suffix}"
 
             print(f"\n[{count+1}] Generate: {out_file}")
-            print(f"    DREDGER_1.weights_fraction = {weights}")
-            print(f"    DREDGER_1.file_name        = {dredger_file}")
+            for i, (fn, w) in enumerate(dredger_entries, start=1):
+                print(f"    DREDGER_{i}.weights_fraction = {w}")
+                print(f"    DREDGER_{i}.file_name        = {fn}")
             print(f"    OUTPUT_1.file_name         = {output_file}")
 
             if not DRY_RUN:
@@ -137,7 +290,7 @@ def main():
 
                 # 2) patch the copy
                 text = out_file.read_text(encoding="utf-8")
-                patched, counts = patch_dredger_and_output(text, weights, dredger_file, output_file)
+                patched, counts = patch_dredger_and_output(text, dredger_entries, output_file)
                 out_file.write_text(patched, encoding="utf-8")
 
                 # Basic safety warnings if nothing got replaced (usually means section name differs)

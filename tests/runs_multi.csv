@@ -1,0 +1,3 @@
+run_name,weights_fraction,dredger_1_file_name,dredger_1_weights,dredger_2_file_name,dredger_2_weights,output_file_name
+Run_multi_01,"49 43 8 0 0 0",dredger_a.dfs0,"40.0,40.0,20.0,0,0,0",dredger_b.dfs0,"0,0,0,49,43,8",output_multi_01.dfsu
+Run_multi_02,"40 40 20 0 0 0",dredger_c.dfs0,,dredger_d.dfs0,,output_multi_02.dfsu
