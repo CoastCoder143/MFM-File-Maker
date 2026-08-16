@@ -10,7 +10,7 @@ authors = [
 ]
 keywords = ["mike-fm", "mfm", "modeling", "automation", "dhi"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -23,6 +23,24 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/CoastCoder143/Code-Work"
-Repository = "https://github.com/CoastCoder143/Code-Work"
-Issues = "https://github.com/CoastCoder143/Code-Work/issues"
+Homepage = "https://github.com/CoastCoder143/MFM-File-Maker"
+Repository = "https://github.com/CoastCoder143/MFM-File-Maker"
+Issues = "https://github.com/CoastCoder143/MFM-File-Maker/issues"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
